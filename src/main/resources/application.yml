@@ -10,6 +10,21 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  mail:
+    host: localhost
+    port: 1025
+    username:
+    password:
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+app:
+  email-otp:
+    ttl-minutes: 15
+    resend-cooldown-seconds: 60
+    max-attempts: 15
+    sender: noreply@yourapp.com
 
 jwt:
   secret: fdjjfwuhdbwseuhwsdnswnrwudnwdmtigmzmdhahagjs

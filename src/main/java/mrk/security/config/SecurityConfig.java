@@ -18,6 +18,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Конфигурация безопасности Spring Security
+ * Определяет правила доступа, аутентификации и авторизации для приложения
+ *
+ * @EnableWebSecurity - активирует настройки безопасности веб-приложения
+ */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -25,22 +31,43 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
+    /**
+     * Основная конфигурация цепочки безопасности HTTP
+     * Определяет защищенные endpoints, политики сессий и фильтры
+     *
+     * @param http объект для настройки безопасности
+     * @return сконфигурированная цепочка безопасности
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
+                // Отключаем CSRF защиту для REST API (не нужна для stateless аутентификации)
                 .csrf(AbstractHttpConfigurer::disable)
+                // Устанавливаем политику без сохранения состояния (stateless)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Настройка правил авторизации для различных endpoints
                 .authorizeHttpRequests(auth -> auth
+                        // Публичные endpoints (доступ без аутентификации)
                         .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Admin endpoints (только для пользователей с ролью ADMIN)
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Все остальные endpoints требуют аутентификации
                         .anyRequest().authenticated()
                 )
+                // Настройка провайдера аутентификации
                 .authenticationProvider(authenticationProvider())
+                // Добавление JWT фильтра перед стандартным фильтром аутентификации
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
+    /**
+     * Провайдер аутентификации, связывающий Spring Security с пользовательским сервисом
+     * Использует CustomUserDetailsService для загрузки данных пользователя
+     *
+     * @return настроенный DaoAuthenticationProvider
+     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -49,11 +76,24 @@ public class SecurityConfig {
         return provider;
     }
 
+    /**
+     * Кодировщик паролей для безопасного хранения в базе данных
+     * Использует алгоритм BCrypt для хэширования
+     *
+     * @return BCryptPasswordEncoder instance
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Менеджер аутентификации, координирующий процесс проверки учетных данных
+     * Используется для аутентификации пользователей через различные провайдеры
+     *
+     * @param config конфигурация аутентификации
+     * @return AuthenticationManager instance
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();

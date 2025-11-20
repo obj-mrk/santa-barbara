@@ -13,6 +13,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Реализация UserDetails Spring Security для представления аутентифицированного пользователя
+ * Адаптирует доменную модель User к требованиям Spring Security
+ *
+ * Содержит основные данные пользователя, необходимые для аутентификации и авторизации
+ *
+ */
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,6 +31,12 @@ public class CustomUserDetails implements UserDetails {
     private String password;
     private UserRole role;
 
+    /**
+     * Возвращает список прав (authorities) пользователя на основе его роли
+     * Spring Security использует это для проверки доступа к ресурсам
+     *
+     * @return коллекция прав пользователя с префиксом "ROLE_"
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
