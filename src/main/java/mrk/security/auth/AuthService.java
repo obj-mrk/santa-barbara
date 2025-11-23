@@ -64,7 +64,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getRole()
+                user.getRole(),
+                false
         ));
 
         return new AuthResponse(token);
@@ -120,7 +121,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getRole()
+                user.getRole(),
+                false
         ));
 
         return new AuthResponse(token);

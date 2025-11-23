@@ -16,27 +16,24 @@ import java.util.UUID;
 /**
  * Реализация UserDetails Spring Security для представления аутентифицированного пользователя
  * Адаптирует доменную модель User к требованиям Spring Security
- *
- * Содержит основные данные пользователя, необходимые для аутентификации и авторизации
- *
  */
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class CustomUserDetails implements UserDetails {
+
     private UUID id;
     private String email;
     private String password;
     private UserRole role;
 
     /**
-     * Возвращает список прав (authorities) пользователя на основе его роли
-     * Spring Security использует это для проверки доступа к ресурсам
-     *
-     * @return коллекция прав пользователя с префиксом "ROLE_"
+     * Флаг блокировки учетной записи
+     * Используется для реализации административной блокировки пользователя
      */
+    private boolean blocked;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
@@ -47,8 +44,30 @@ public class CustomUserDetails implements UserDetails {
         return email;
     }
 
-    @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
-    @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return true; }
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    /**
+     * Если пользователь заблокирован администратором, считаем аккаунт "залоченным"
+     */
+    @Override
+    public boolean isAccountNonLocked() {
+        return !blocked;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    /**
+     * Аналогично isAccountNonLocked - в простом варианте считаем,
+     * что заблокированный пользователь "не включен" в системе
+     */
+    @Override
+    public boolean isEnabled() {
+        return !blocked;
+    }
 }

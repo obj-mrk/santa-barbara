@@ -21,11 +21,6 @@ import java.util.UUID;
 @Getter
 @Setter
 public class User {
-
-    /**
-     * Уникальный идентификатор пользователя
-     * Генерируется автоматически при создании
-     */
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -43,6 +38,14 @@ public class User {
      */
     @Column(nullable = false)
     private boolean emailVerified = false;
+
+    /**
+     * Флаг блокировки учетной записи
+     * true  - учетная запись заблокирована администратором
+     * false - учетная запись активна
+     */
+    @Column(nullable = false)
+    private boolean blocked = false;
 
     /**
      * Хэш пароля пользователя

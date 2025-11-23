@@ -4,5 +4,6 @@
     <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V1__init.sql" value="0591fcba-cb90-41d0-83c9-3deb288b935a" />
     <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V2__Create_audit_log_table.sql" value="0591fcba-cb90-41d0-83c9-3deb288b935a" />
     <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V3__email_otp.sql" value="0591fcba-cb90-41d0-83c9-3deb288b935a" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V4__add_blocked_to_users.sql" value="0591fcba-cb90-41d0-83c9-3deb288b935a" />
   </component>
 </project>
