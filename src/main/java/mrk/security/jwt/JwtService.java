@@ -35,11 +35,15 @@ public class JwtService {
      * @return подписанный JWT токен в виде строки
      */
     public String generateToken(UserDetails userDetails) {
+        String userEmail = userDetails.getUsername();
+        Date currentDate = new Date();
+        Date expirationDate = new Date(System.currentTimeMillis() + jwtExpirationMs);
+        
         return Jwts.builder()
-                .setSubject(userDetails.getUsername())  // email пользователя
-                .setIssuedAt(new Date())                // время создания
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))  // время истечения
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)  // подпись
+                .setSubject(userEmail) // email пользователя
+                .setIssuedAt(currentDate) // время создания
+                .setExpiration(expirationDate) // время истечения
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // подпись
                 .compact();
     }
 
@@ -51,18 +55,26 @@ public class JwtService {
      * @return true если токен валиден и соответствует пользователю
      */
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        return extractUsername(token).equals(userDetails.getUsername()) && !isExpired(token);
+        String tokenUsername = extractUsername(token);
+        boolean isUsernameMatching = tokenUsername.equals(userDetails.getUsername());
+        boolean isTokenNotExpired = !isExpired(token);
+        
+        return isUsernameMatching && isTokenNotExpired;
     }
 
     /**
      * Проверяет истек ли срок действия JWT токена
      *
      * @param token JWT токен для проверки
-     * @return true если токен просрочен
+     * @return true если токен просроченд
      */
     private boolean isExpired(String token) {
-        Date exp = Jwts.parserBuilder().setSigningKey(getSigningKey())
-                .build().parseClaimsJws(token).getBody().getExpiration();
+        Date exp = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
         return exp.before(new Date());
     }
 
