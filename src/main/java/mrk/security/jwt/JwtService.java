@@ -35,14 +35,14 @@ public class JwtService {
      * @return подписанный JWT токен в виде строки
      */
     public String generateToken(UserDetails userDetails) {
-        String userEmail = userDetails.getUsername();
-        Date currentDate = new Date();
-        Date expirationDate = new Date(System.currentTimeMillis() + jwtExpirationMs);
+        String userEmail = userDetails.getUsername(); // email пользователя
+        Date currentDate = new Date(); // время создания
+        Date expirationDate = new Date(System.currentTimeMillis() + jwtExpirationMs); // время истечения
         
         return Jwts.builder()
-                .setSubject(userEmail) // email пользователя
-                .setIssuedAt(currentDate) // время создания
-                .setExpiration(expirationDate) // время истечения
+                .setSubject(userEmail) 
+                .setIssuedAt(currentDate) 
+                .setExpiration(expirationDate) 
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256) // подпись
                 .compact();
     }
