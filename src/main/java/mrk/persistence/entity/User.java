@@ -63,6 +63,10 @@ public class User {
     @NotBlank
     private String name;
 
+    private String totpSecret;
+
+    private boolean totpEnabled = false;
+
     /**
      * Роль пользователя в системе
      * Определяет уровень доступа и права

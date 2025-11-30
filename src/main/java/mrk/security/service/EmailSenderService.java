@@ -1,4 +1,4 @@
-package mrk.email;
+package mrk.security.service;
 
 import lombok.RequiredArgsConstructor;
 import mrk.security.config.EmailOtpProperties;

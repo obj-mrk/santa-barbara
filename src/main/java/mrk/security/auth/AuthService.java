@@ -2,13 +2,19 @@ package mrk.security.auth;
 
 import lombok.RequiredArgsConstructor;
 
+import mrk.persistence.entity.AuthSession;
 import mrk.persistence.entity.User;
+import mrk.persistence.entity.enums.AuthSessionStatus;
 import mrk.persistence.entity.enums.UserRole;
+import mrk.persistence.repo.AuthSessionRepository;
 import mrk.persistence.repo.UserRepository;
 import mrk.security.jwt.JwtService;
 import mrk.security.otp.EmailOtpService;
+import mrk.security.service.TotpService;
 import mrk.security.user.CustomUserDetails;
-import mrk.security.user.dto.*;
+import mrk.security.user.dto.request.*;
+import mrk.security.user.dto.response.AuthResponse;
+import mrk.security.user.dto.response.LoginStepResponse;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -16,14 +22,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import java.time.Instant;
 
 /**
- * Сервис аутентификации и регистрации пользователей
- * Обрабатывает бизнес-логику связанную с управлением доступом
- *
- * @Transactional - все методы выполняются в транзакциях для обеспечения
- * целостности данных и избежания частичных обновлений
+ * Сервис аутентификации и регистрации пользователей.
+ * Отвечает за:
+ *  - регистрацию;
+ *  - аутентификацию по паролю + e-mail OTP (двухфакторная схема);
+ *  - аутентификацию по паролю + TOTP (двухфакторная схема с Яндекс.Ключом).
  */
 
 @Service
@@ -34,6 +40,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailOtpService emailOtpService;
+    private final TotpService totpService;
+    private final AuthSessionRepository authSessionRepository;
 
     /**
      * Регистрация нового пользователя в системе
@@ -73,24 +81,30 @@ public class AuthService {
      * @return LoginStep1Response с sessionId для OTP верификации
      */
     @Transactional
-    public LoginStep1Response login(LoginRequest request) {
-        // Аутентификация пользователя через Spring Security
+    public LoginStepResponse login3fa(LoginRequest request) {
+        // 1) Проверяем логин/пароль через AuthenticationManager
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(),
+                new UsernamePasswordAuthenticationToken(
+                        request.email(),
                         request.password()
                 )
         );
-        // Получение аутентифицированных данных пользователя
         CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
-        String email = principal.getUsername();
+        User user = userRepository.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new IllegalStateException("Пользователь не найден"));
 
-        // Генерация уникального идентификатора сессии
-        UUID sessionId = UUID.randomUUID();
+        // 2) Создаём AuthSession
+        AuthSession session = new AuthSession();
+        session.setUser(user);
+        session.setStatus(AuthSessionStatus.PASSWORD_VERIFIED);
+        session.setExpiresAt(Instant.now().plusSeconds(15 * 60));
+        authSessionRepository.save(session);
 
-        // Создание и отправка OTP кода на email пользователя
-        emailOtpService.createAndSendOtp(sessionId, email);
+        // 3) Создаём и отправляем OTP, привязанный к этой сессии
+        emailOtpService.createAndSendOtp(session.getId(), user.getEmail());
 
-        return new LoginStep1Response(sessionId, "EMAIL_OTP");
+        // 4) Возвращаем sessionId и следующий фактор
+        return new LoginStepResponse(session.getId(), "EMAIL_OTP");
     }
 
     /**
@@ -102,17 +116,65 @@ public class AuthService {
      * @throws IllegalStateException если пользователь не найден
      */
     @Transactional
-    public AuthResponse verifyOtpAndIssueToken(OtpVerifyRequest request) {
-        // Верификация OTP кода и получение email пользователя
-        String email = emailOtpService.verifyOtp(request.sessionId(), request.code());
+    public LoginStepResponse verifyEmailOtp3fa(EmailOtp3faRequest request) {
+        AuthSession session = authSessionRepository.findById(request.sessionId())
+                .orElseThrow(() -> new IllegalArgumentException("Сессия аутентификации не найдена"));
 
-        // Поиск пользователя по email
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("Пользователь с таким e-mail не найден"));
+        if (!session.isActive()) {
+            throw new IllegalStateException("Сессия аутентификации недействительна или истекла");
+        }
 
-        // Генерация финального JWT токена
+        if (session.getStatus() != AuthSessionStatus.PASSWORD_VERIFIED) {
+            throw new IllegalStateException("Неверный этап аутентификации для проверки e-mail OTP");
+        }
+
+        // проверяем OTP, привязанный к этой сессии
+        emailOtpService.verifyOtp(session.getId(), request.code());
+
+        // переводим сессию на следующий этап
+        session.setStatus(AuthSessionStatus.EMAIL_VERIFIED);
+        authSessionRepository.save(session);
+
+        // возвращаем sessionId и следующий фактор: TOTP
+        return new LoginStepResponse(session.getId(), "TOTP");
+    }
+
+    @Transactional
+    public AuthResponse verifyTotp3faAndIssueToken(Totp3faRequest request) {
+        AuthSession session = authSessionRepository.findById(request.sessionId())
+                .orElseThrow(() -> new IllegalArgumentException("Сессия аутентификации не найдена"));
+
+        if (!session.isActive()) {
+            throw new IllegalStateException("Сессия аутентификации недействительна или истекла");
+        }
+
+        if (session.getStatus() != AuthSessionStatus.EMAIL_VERIFIED) {
+            throw new IllegalStateException("Неверный этап аутентификации для проверки TOTP");
+        }
+
+        User user = session.getUser();
+
+        if (!user.isTotpEnabled() || user.getTotpSecret() == null) {
+            throw new IllegalStateException("Для пользователя не настроена TOTP-аутентификация");
+        }
+
+        boolean ok;
+        try {
+            ok = totpService.verifyCode(user.getTotpSecret(), request.code());
+        } catch (Exception e) {
+            throw new IllegalStateException("Ошибка проверки TOTP-кода", e);
+        }
+
+        if (!ok) {
+            throw new IllegalArgumentException("Неверный TOTP-код");
+        }
+
+        // Всё успешно: помечаем сессию как завершённую и потреблённую
+        session.markCompleted();
+        authSessionRepository.save(session);
+
+        // Генерируем финальный JWT
         String token = jwtService.generateToken(CustomUserDetails.fromUser(user));
-
         return new AuthResponse(token);
     }
 }

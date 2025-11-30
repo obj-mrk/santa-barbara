@@ -1,7 +1,7 @@
 package mrk.security.otp;
 
 import lombok.RequiredArgsConstructor;
-import mrk.email.EmailSenderService;
+import mrk.security.service.EmailSenderService;
 import mrk.persistence.entity.EmailOtp;
 import mrk.persistence.repo.EmailOtpRepository;
 import mrk.security.config.EmailOtpProperties;
@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Сервис управления одноразовыми кодами (OTP), отправляемыми на e-mail.
+ * Уникальный идентификатор записи OTP. Не совпадает с sessionId; связь с сессией хранится в поле sessionId.
  */
 
 @Service
@@ -87,6 +87,8 @@ public class EmailOtpService {
      * @throws IllegalStateException если код использован, истек или превышены попытки
      * @throws IllegalArgumentException если код не найден или неверен
      */
+
+    @Transactional
     public String verifyOtp(UUID sessionId, String code) {
         OffsetDateTime now = OffsetDateTime.now();
 

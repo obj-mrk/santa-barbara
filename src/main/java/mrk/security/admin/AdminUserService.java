@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import mrk.persistence.entity.User;
 import mrk.persistence.entity.enums.UserRole;
 import mrk.persistence.repo.UserRepository;
-import mrk.security.admin.dto.AdminUserResponse;
+import mrk.security.user.dto.response.AdminUserResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;

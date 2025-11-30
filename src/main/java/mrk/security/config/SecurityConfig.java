@@ -50,11 +50,16 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // Настройка правил авторизации для различных endpoints
                 .authorizeHttpRequests(auth -> auth
-                        // Публичные endpoints (доступ без аутентификации)
-                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // Admin endpoints (только для пользователей с ролью ADMIN)
+                        // публичные — регистрация и вход
+                        .requestMatchers(
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/login/password",
+                                "/api/v1/auth/login/otp",
+                                "/api/v1/auth/login/totp"
+                        ).permitAll()
+                        // остальные /auth/** только с JWT
+                        .requestMatchers("/api/v1/auth/**").authenticated()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        // Все остальные endpoints требуют аутентификации
                         .anyRequest().authenticated()
                 )
                 // Настройка провайдера аутентификации

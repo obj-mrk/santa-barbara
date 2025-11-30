@@ -1,4 +1,4 @@
-package mrk.security.admin.dto;
+package mrk.security.user.dto.response;
 
 import mrk.persistence.entity.enums.UserRole;
 

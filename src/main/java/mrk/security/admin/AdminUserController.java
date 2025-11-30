@@ -3,9 +3,9 @@ package mrk.security.admin;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import mrk.security.admin.dto.AdminUserResponse;
-import mrk.security.admin.dto.ChangeUserBlockRequest;
-import mrk.security.admin.dto.ChangeUserRoleRequest;
+import mrk.security.user.dto.response.AdminUserResponse;
+import mrk.security.user.dto.request.ChangeUserBlockRequest;
+import mrk.security.user.dto.request.ChangeUserRoleRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
