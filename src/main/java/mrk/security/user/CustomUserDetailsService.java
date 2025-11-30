@@ -19,12 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         // Преобразование доменной модели в объект Spring Security
-        return new CustomUserDetails(
-                user.getId(),
-                user.getEmail(),
-                user.getPassword(),
-                user.getRole(),
-                user.isBlocked()
-        );
+        return CustomUserDetails.fromUser(user);
     }
 }

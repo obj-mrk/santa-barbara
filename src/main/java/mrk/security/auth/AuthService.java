@@ -60,13 +60,7 @@ public class AuthService {
         userRepository.save(user);
 
         // Генерация JWT токена на основе данных пользователя
-        String token = jwtService.generateToken(new CustomUserDetails(
-                user.getId(),
-                user.getEmail(),
-                user.getPassword(),
-                user.getRole(),
-                false
-        ));
+        String token = jwtService.generateToken(CustomUserDetails.fromUser(user));
 
         return new AuthResponse(token);
     }
@@ -117,13 +111,7 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalStateException("Пользователь с таким e-mail не найден"));
 
         // Генерация финального JWT токена
-        String token = jwtService.generateToken(new CustomUserDetails(
-                user.getId(),
-                user.getEmail(),
-                user.getPassword(),
-                user.getRole(),
-                false
-        ));
+        String token = jwtService.generateToken(CustomUserDetails.fromUser(user));
 
         return new AuthResponse(token);
     }
