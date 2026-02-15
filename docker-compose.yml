@@ -1,0 +1,22 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16
+    container_name: snt-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sntdb
+      POSTGRES_USER: sntuser
+      POSTGRES_PASSWORD: sntpass
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: snt-mailhog
+    restart: always
+    ports:
+      - "1025:1025"  # SMTP порт для отправки писем
+      - "8025:8025"  # Web UI для просмотра писем
